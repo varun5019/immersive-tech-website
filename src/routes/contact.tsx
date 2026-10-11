@@ -1,0 +1,6 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { labHead } from '@/lib/lab/meta';
+import { SectionLabel } from '@/components/lab/research';
+import { ArrowUpRight } from 'lucide-react';
+export const Route=createFileRoute('/contact')({head:()=>labHead('Contact','Connect with the Immersive Technologies Lab at KTH Royal Institute of Technology in Stockholm.'),component:Contact});
+function Contact(){return <div className="page-wrap content-page"><SectionLabel number="05">Get in touch</SectionLabel><h1 className="page-title">Let’s explore<br/>what’s possible.</h1><p className="body-copy">Interested in collaboration, immersive research or joining the lab? Connect with our team at KTH Royal Institute of Technology.</p><section className="section-band mt-12 intro-grid"><h2 className="section-heading">Find us at KTH.</h2><div className="space-y-6"><p className="body-copy">Media and Interaction Design Departments<br/>School of Electrical Engineering and Computer Science<br/>KTH Royal Institute of Technology<br/>Stockholm, Sweden</p><a href="https://www.kth.se/en/eecs" target="_blank" rel="noreferrer" className="text-link">Visit EECS at KTH<ArrowUpRight className="size-4"/></a></div></section></div>;}

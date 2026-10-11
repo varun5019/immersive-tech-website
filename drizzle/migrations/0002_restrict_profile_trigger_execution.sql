@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.new_lab_profile() FROM PUBLIC, anon, authenticated;

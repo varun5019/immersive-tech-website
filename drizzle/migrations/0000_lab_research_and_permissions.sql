@@ -1,0 +1,44 @@
+CREATE TYPE public.lab_role AS ENUM ('editor','admin');
+CREATE TABLE public.profiles (id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE, first_name text NOT NULL DEFAULT '', last_name text NOT NULL DEFAULT '', position text NOT NULL DEFAULT '', bio text NOT NULL DEFAULT '', photo_url text NOT NULL DEFAULT '', links jsonb NOT NULL DEFAULT '{}', interests text[] NOT NULL DEFAULT '{}', submitted boolean NOT NULL DEFAULT false);
+GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated; GRANT SELECT ON public.profiles TO anon; GRANT ALL ON public.profiles TO service_role;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE TABLE public.user_roles (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE, role public.lab_role NOT NULL, UNIQUE(user_id,role));
+GRANT SELECT ON public.user_roles TO authenticated; GRANT ALL ON public.user_roles TO service_role;
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+CREATE FUNCTION public.has_lab_role(uid uuid, wanted public.lab_role) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles WHERE user_id=uid AND role=wanted) $$;
+CREATE FUNCTION public.is_lab_editor(uid uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$ SELECT public.has_lab_role(uid,'editor') OR public.has_lab_role(uid,'admin') $$;
+CREATE POLICY roles_read ON public.user_roles FOR SELECT TO authenticated USING(user_id=auth.uid() OR public.has_lab_role(auth.uid(),'admin'));
+CREATE POLICY profiles_public ON public.profiles FOR SELECT TO anon,authenticated USING(public.is_lab_editor(id));
+CREATE POLICY profiles_self ON public.profiles FOR SELECT TO authenticated USING(id=auth.uid() OR public.has_lab_role(auth.uid(),'admin'));
+CREATE POLICY profiles_insert ON public.profiles FOR INSERT TO authenticated WITH CHECK(id=auth.uid());
+CREATE POLICY profiles_update ON public.profiles FOR UPDATE TO authenticated USING(id=auth.uid()) WITH CHECK(id=auth.uid());
+CREATE TABLE public.profile_contacts (user_id uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE, university_email text NOT NULL DEFAULT '');
+GRANT SELECT,INSERT,UPDATE ON public.profile_contacts TO authenticated; GRANT ALL ON public.profile_contacts TO service_role;
+ALTER TABLE public.profile_contacts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY contacts_read ON public.profile_contacts FOR SELECT TO authenticated USING(user_id=auth.uid() OR public.has_lab_role(auth.uid(),'admin'));
+CREATE POLICY contacts_insert ON public.profile_contacts FOR INSERT TO authenticated WITH CHECK(user_id=auth.uid());
+CREATE POLICY contacts_update ON public.profile_contacts FOR UPDATE TO authenticated USING(user_id=auth.uid()) WITH CHECK(user_id=auth.uid());
+CREATE FUNCTION public.new_lab_profile() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ BEGIN INSERT INTO public.profiles(id,first_name,last_name) VALUES(NEW.id,coalesce(NEW.raw_user_meta_data->>'given_name',''),coalesce(NEW.raw_user_meta_data->>'family_name','')); RETURN NEW; END $$;
+CREATE TRIGGER new_lab_user AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.new_lab_profile();
+CREATE TABLE public.research (id text PRIMARY KEY DEFAULT gen_random_uuid()::text, kind text NOT NULL CHECK(kind IN ('project','publication','event')), owner_id uuid, title text NOT NULL, description text NOT NULL DEFAULT '', data jsonb NOT NULL DEFAULT '{}', created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT ON public.research TO anon; GRANT SELECT,INSERT,UPDATE,DELETE ON public.research TO authenticated; GRANT ALL ON public.research TO service_role;
+ALTER TABLE public.research ENABLE ROW LEVEL SECURITY;
+CREATE POLICY research_public ON public.research FOR SELECT TO anon,authenticated USING(true);
+CREATE POLICY research_add ON public.research FOR INSERT TO authenticated WITH CHECK(owner_id=auth.uid() AND public.is_lab_editor(auth.uid()));
+CREATE POLICY research_edit ON public.research FOR UPDATE TO authenticated USING(public.is_lab_editor(auth.uid()) AND (owner_id=auth.uid() OR public.has_lab_role(auth.uid(),'admin'))) WITH CHECK(public.is_lab_editor(auth.uid()) AND (owner_id=auth.uid() OR public.has_lab_role(auth.uid(),'admin')));
+CREATE POLICY research_delete ON public.research FOR DELETE TO authenticated USING(public.is_lab_editor(auth.uid()) AND (owner_id=auth.uid() OR public.has_lab_role(auth.uid(),'admin')));
+CREATE TABLE public.publication_visibility (publication_id text REFERENCES public.research(id) ON DELETE CASCADE, user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE, visible boolean NOT NULL DEFAULT true, PRIMARY KEY(publication_id,user_id));
+GRANT SELECT ON public.publication_visibility TO anon; GRANT SELECT,INSERT,UPDATE,DELETE ON public.publication_visibility TO authenticated; GRANT ALL ON public.publication_visibility TO service_role;
+ALTER TABLE public.publication_visibility ENABLE ROW LEVEL SECURITY;
+CREATE POLICY visibility_read ON public.publication_visibility FOR SELECT TO anon,authenticated USING(true);
+CREATE POLICY visibility_write ON public.publication_visibility FOR ALL TO authenticated USING(user_id=auth.uid() AND public.is_lab_editor(auth.uid())) WITH CHECK(user_id=auth.uid() AND public.is_lab_editor(auth.uid()));
+CREATE FUNCTION public.approve_lab_member(member_id uuid) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ BEGIN IF NOT public.has_lab_role(auth.uid(),'admin') THEN RAISE EXCEPTION 'Forbidden'; END IF; IF NOT EXISTS(SELECT 1 FROM public.profiles WHERE id=member_id AND submitted) THEN RAISE EXCEPTION 'Profile not submitted'; END IF; INSERT INTO public.user_roles(user_id,role) VALUES(member_id,'editor') ON CONFLICT DO NOTHING; END $$;
+REVOKE ALL ON FUNCTION public.approve_lab_member(uuid) FROM PUBLIC; GRANT EXECUTE ON FUNCTION public.approve_lab_member(uuid) TO authenticated;
+INSERT INTO public.research(id,kind,title,description,data) VALUES
+('embodied-presence','project','Beyond the screen','Exploring how embodied interaction and mixed reality can create more meaningful connections between people, places and digital experiences.','{"category":"Mixed reality","image":"mixed","status":"Ongoing","year":"2026"}'),
+('spatial-interaction','project','Making space for interaction','Designing intuitive ways to touch, navigate and collaborate in spatial interfaces. Our work investigates how everyday gestures can bridge physical and digital worlds.','{"category":"Spatial interaction","image":"spatial","status":"Ongoing","year":"2026"}'),
+('felt-experiences','project','Experiences you can feel','Investigating the role of touch and multisensory feedback in immersive environments, from tangible interfaces to embodied experiences.','{"category":"Haptics & perception","image":"haptic","status":"Ongoing","year":"2026"}'),
+('presence-in-mixed-reality','publication','Rethinking presence: embodied interaction in mixed reality','An exploration of how embodied interaction shapes experiences of presence in mixed reality. This illustrative research entry examines the relationship between spatial perception, social connection and interface design.','{"authors":[{"name":"Research team","affiliation":"KTH Royal Institute of Technology","country":"Sweden","email":""}],"year":2026,"venue":"Human–Computer Interaction","type":"Conference Article","keywords":["Mixed reality","Embodiment"],"project_id":"embodied-presence","demo":true}'),
+('designing-spatial-interfaces','publication','Designing for the in-between: tangible and spatial interfaces','This illustrative publication explores design approaches for interfaces that move between physical objects and digital spaces.','{"authors":[{"name":"Research team","affiliation":"KTH Royal Institute of Technology","country":"Sweden","email":""}],"year":2025,"venue":"Interaction Design & Architecture(s)","type":"Journal Article","keywords":["Spatial interaction"],"project_id":"spatial-interaction","demo":true}'),
+('open-lab','event','Open lab: experience mixed reality','Join an informal exploration of mixed reality and spatial interaction. This is a sample event; replace it with a confirmed lab event before publishing.','{"start":"2026-11-12T13:00:00+01:00","end":"2026-11-12T15:00:00+01:00","type":"Event","location":"KTH, Stockholm","demo":true}'),
+('spatial-study','event','How do we navigate virtual spaces?','An example upcoming study about spatial perception and navigation in virtual environments. Replace this with a confirmed participant study.','{"start":"2026-11-19T10:00:00+01:00","end":"2026-11-19T12:00:00+01:00","type":"Study","location":"KTH, Stockholm","demo":true}');

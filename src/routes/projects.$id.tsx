@@ -1,0 +1,7 @@
+import { createFileRoute, notFound, Link } from '@tanstack/react-router';
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { labQuery } from '@/lib/lab/queries';
+import { labHead } from '@/lib/lab/meta';
+import { researchImage, PublicationRow } from '@/components/lab/research';
+export const Route=createFileRoute('/projects/$id')({loader:async({context,params})=>{const data=await context.queryClient.ensureQueryData(labQuery);const item=data.research.find(x=>x.kind==='project'&&x.id===params.id);if(!item)throw notFound();return item;},head:({loaderData})=>labHead(loaderData?.title??'Project unavailable',loaderData?.description??'Discover immersive research at KTH.'),component:Project});
+function Project(){const item=Route.useLoaderData();const {data}=useSuspenseQuery(labQuery);return <div className="page-wrap content-page"><Link to="/projects" className="text-link">← All projects</Link><h1 className="page-title">{item.title}</h1><div className="flex gap-3"><span className="tag">{item.data.category}</span><span className="tag">{item.data.status}</span></div><img src={researchImage(item)} alt={item.title} className="detail-image" width={1440} height={1024}/><p className="body-copy">{item.description}</p><section className="section-band mt-12"><h2 className="section-heading mb-6">Related publications</h2>{data.research.filter(x=>x.kind==='publication'&&x.data.project_id===item.id).map(x=><PublicationRow key={x.id} item={x} profiles={data.profiles}/>)}</section></div>;}

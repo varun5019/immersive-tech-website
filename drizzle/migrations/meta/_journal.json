@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791743864163,
+      "tag": "0000_lab_research_and_permissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791744044008,
+      "tag": "0001_lab_media_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791744190650,
+      "tag": "0002_restrict_profile_trigger_execution",
+      "breakpoints": true
+    }
+  ]
+}

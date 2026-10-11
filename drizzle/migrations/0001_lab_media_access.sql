@@ -1,0 +1,3 @@
+CREATE POLICY lab_media_read ON storage.objects FOR SELECT TO anon,authenticated USING(bucket_id='lab-media' AND (public.is_lab_editor((storage.foldername(name))[1]::uuid) OR (auth.uid()::text=(storage.foldername(name))[1])));
+CREATE POLICY lab_media_upload ON storage.objects FOR INSERT TO authenticated WITH CHECK(bucket_id='lab-media' AND (storage.foldername(name))[1]=auth.uid()::text);
+CREATE POLICY lab_media_update ON storage.objects FOR UPDATE TO authenticated USING(bucket_id='lab-media' AND (storage.foldername(name))[1]=auth.uid()::text) WITH CHECK(bucket_id='lab-media' AND (storage.foldername(name))[1]=auth.uid()::text);
