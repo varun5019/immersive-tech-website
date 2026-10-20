@@ -1,0 +1,3 @@
+CREATE POLICY project_images_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id='lab-media' AND (storage.foldername(name))[1]='projects' AND (storage.foldername(name))[2]=auth.uid()::text AND public.is_lab_editor(auth.uid()));
+CREATE POLICY project_images_select ON storage.objects FOR SELECT TO authenticated USING (bucket_id='lab-media' AND (storage.foldername(name))[1]='projects' AND public.is_lab_editor(auth.uid()));
+CREATE POLICY project_images_delete ON storage.objects FOR DELETE TO authenticated USING (bucket_id='lab-media' AND (storage.foldername(name))[1]='projects' AND (storage.foldername(name))[2]=auth.uid()::text);

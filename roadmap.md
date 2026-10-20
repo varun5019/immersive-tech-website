@@ -1,6 +1,16 @@
 # Immersive Technologies Lab
+- [x] About team section no longer reads as a separate band: it sits on white with no dividing line above it; verified the section background is transparent, has no top border, and keeps the group photo, heading and member cards.
+- [x] Add the uploaded group photograph to the About team section above the member cards and drop the illustrative lab photo that used to sit there; verified the group photo loads, keeps every head in frame, has soft rounded corners, and no gap or horizontal overflow is left behind.
+- [x] Add full-viewport VR photo hero, subject-aware outline lettering, and transparent hero navigation; verified desktop/mobile sizing, photo loading, no overflow, scroll surface changes and About navigation without runtime errors.
+- [x] Make navigation a floating inset bar with active-page highlighting, logo-only bottom-left scroll state, and automatic return on pause; verified scroll/restore positions, page navigation, narrow-screen menu, and no overflow or runtime errors.
+- [x] Remove card border, background and padding from project cards so the image sits straight above the info.
+- [x] Replace home project stacking with a simple two-per-row grid; hover rotates the arrow north-east inside a black circle and zooms the image.
+- [x] Add reference-style expanding team cards below home research and across team listings; verified real profile hover, icon links, touchscreen expansion and no mobile overflow.
+- [x] Add editable project team members and hide empty public content sections; verified signed-in saving, public display, removal, and temporary test cleanup.
+- [x] Add GSAP motion, Inter-only typography, white/dark section rhythm, and smooth scroll-stacking home projects; verify navigation and scroll behavior. Three-card stacking verified with temporary browser data; currently only one public project exists.
 - [x] Build light, animated public research website and detail pages.
 - [x] Connect EU-hosted Cloud, authentication, profiles and editor approvals.
 - [x] Build publication, event and profile editing with imports.
 - [x] Verify public navigation, mobile layout and signed-out workspace protection.
-- [ ] Assign the first administrator and verify signed-in editing; blocked until the user creates an account and identifies the administrator.
+- [x] Assign the first administrator and verify signed-in editing; Varun has administrator access and project editing was verified.
+- [x] Apply Grift throughout and match the reference’s staggered hero typography; verified weight 900, font loading, desktop/mobile placement, no overflow or runtime errors.
